@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, KeyRound, MonitorUp, Plus, RefreshCw } from "lucide-react";
+import { Eye, KeyRound, MonitorUp, Play, Plus, RefreshCw, Square } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Template = {
@@ -14,6 +14,7 @@ type TeacherTask = {
   id: string;
   title: string;
   instructions: string;
+  status: "DRAFT" | "ACTIVE" | "CLOSED";
   displayEnabled: boolean;
   template: { title: string };
   classBinding: { name: string; externalClassId: string };
@@ -77,7 +78,26 @@ export default function TeacherPage() {
       setMessage(data.message ?? data.error ?? "创建失败。");
       return;
     }
-    setMessage("任务已创建。");
+    setMessage("任务已创建，点击开始后学生端才可以进入。");
+    await load();
+  }
+
+  async function updateTaskStatus(taskId: string, status: TeacherTask["status"]) {
+    setMessage(status === "ACTIVE" ? "正在开始任务..." : "正在结束任务...");
+    const response = await fetch("/api/tasks", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ taskId, status })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setMessage(data.message ?? data.error ?? "任务状态更新失败。");
+      return;
+    }
+    setMessage(status === "ACTIVE" ? "任务已开始，学生端可以作答。" : "任务已结束，学生端不能再提交。");
     await load();
   }
 
@@ -201,12 +221,33 @@ export default function TeacherPage() {
                 <div>
                   <span>{task.classBinding.name}</span>
                   <h3>{task.title}</h3>
+                  <b className={`statusPill status${task.status}`}>{taskStatusText(task.status)}</b>
                 </div>
-                {task.displayEnabled && (
-                  <Link className="iconButton" aria-label="打开大屏" href={`/display/${task.id}`}>
-                    <MonitorUp size={18} />
-                  </Link>
-                )}
+                <div className="taskActions">
+                  {task.status === "DRAFT" && (
+                    <button
+                      className="button primary"
+                      type="button"
+                      onClick={() => updateTaskStatus(task.id, "ACTIVE")}
+                    >
+                      <Play size={18} /> 开始
+                    </button>
+                  )}
+                  {task.status === "ACTIVE" && (
+                    <button
+                      className="button secondary"
+                      type="button"
+                      onClick={() => updateTaskStatus(task.id, "CLOSED")}
+                    >
+                      <Square size={18} /> 结束
+                    </button>
+                  )}
+                  {task.displayEnabled && (
+                    <Link className="iconButton" aria-label="打开大屏" href={`/display/${task.id}`}>
+                      <MonitorUp size={18} />
+                    </Link>
+                  )}
+                </div>
               </div>
               <p>{task.instructions}</p>
               <div className="metricRow">
@@ -228,4 +269,10 @@ export default function TeacherPage() {
       </section>
     </main>
   );
+}
+
+function taskStatusText(status: TeacherTask["status"]) {
+  if (status === "DRAFT") return "准备中";
+  if (status === "ACTIVE") return "进行中";
+  return "已结束";
 }

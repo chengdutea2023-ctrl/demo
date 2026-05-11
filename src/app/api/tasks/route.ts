@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { TaskStatus, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { requireSessionUser } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
@@ -13,6 +13,11 @@ const createTaskSchema = z.object({
   title: z.string().min(1).max(80),
   instructions: z.string().min(1).max(600),
   displayEnabled: z.boolean().default(false)
+});
+
+const updateTaskStatusSchema = z.object({
+  taskId: z.string().min(1),
+  status: z.nativeEnum(TaskStatus)
 });
 
 export async function GET(request: Request) {
@@ -107,6 +112,7 @@ export async function POST(request: Request) {
         teacherId: session.id,
         title: input.title,
         instructions: input.instructions,
+        status: TaskStatus.DRAFT,
         displayEnabled: input.displayEnabled
       },
       include: { template: true, classBinding: true }
@@ -116,4 +122,46 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(error);
   }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await requireSessionUser(request);
+    if (session.role !== UserRole.TEACHER) {
+      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
+
+    const input = updateTaskStatusSchema.parse(await request.json());
+    const task = await prisma.classTask.findFirst({
+      where: {
+        id: input.taskId,
+        teacherId: session.id
+      }
+    });
+
+    if (!task) {
+      return NextResponse.json({ error: "TASK_NOT_FOUND" }, { status: 404 });
+    }
+
+    if (!canTransitionTask(task.status, input.status)) {
+      return NextResponse.json({ error: "INVALID_TASK_STATUS_TRANSITION" }, { status: 400 });
+    }
+
+    const updated = await prisma.classTask.update({
+      where: { id: task.id },
+      data: { status: input.status },
+      include: { template: true, classBinding: true }
+    });
+
+    return NextResponse.json({ task: updated });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+function canTransitionTask(current: TaskStatus, next: TaskStatus) {
+  if (current === next) return true;
+  if (current === TaskStatus.DRAFT && next === TaskStatus.ACTIVE) return true;
+  if (current === TaskStatus.ACTIVE && next === TaskStatus.CLOSED) return true;
+  return false;
 }

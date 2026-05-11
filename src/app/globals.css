@@ -374,6 +374,45 @@ label {
   margin: 4px 0 0;
 }
 
+.taskActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.taskActions .button {
+  min-height: 44px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.statusACTIVE {
+  border-color: rgba(31, 157, 119, .28);
+  color: var(--green);
+  background: #eaf8f3;
+}
+
+.statusCLOSED {
+  border-color: rgba(101, 117, 139, .26);
+  color: var(--muted);
+  background: var(--surface-strong);
+}
+
 .metricRow {
   gap: 8px;
 }

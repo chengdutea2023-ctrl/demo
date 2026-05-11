@@ -117,7 +117,7 @@ model ClassTask {
   teacherId      String
   title          String
   instructions   String
-  status         TaskStatus @default(ACTIVE)
+  status         TaskStatus @default(DRAFT)
   displayEnabled Boolean    @default(false)
   dueAt          DateTime?
   createdAt      DateTime   @default(now())

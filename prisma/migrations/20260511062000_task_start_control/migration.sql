@@ -1,0 +1,1 @@
+ALTER TABLE "ClassTask" ALTER COLUMN "status" SET DEFAULT 'DRAFT';

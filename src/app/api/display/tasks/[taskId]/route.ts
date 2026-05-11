@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { TaskStatus } from "@prisma/client";
 import { jsonError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -9,7 +10,11 @@ export async function GET(
   try {
     const { taskId } = await context.params;
     const task = await prisma.classTask.findFirst({
-      where: { id: taskId, displayEnabled: true },
+      where: {
+        id: taskId,
+        displayEnabled: true,
+        status: { in: [TaskStatus.ACTIVE, TaskStatus.CLOSED] }
+      },
       include: {
         template: true,
         classBinding: true,
