@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, GraduationCap, MonitorUp, Tablet } from "lucide-react";
+import { ArrowRight, GraduationCap, MonitorUp, Sparkles, Tablet } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -17,6 +17,9 @@ export default function HomePage() {
             </Link>
             <Link className="button secondary" href="/student">
               学生端 <Tablet size={18} />
+            </Link>
+            <Link className="button secondary" href="/preview">
+              预览互动课堂 <Sparkles size={18} />
             </Link>
             <Link className="button secondary" href="/teacher/login">
               教师登录

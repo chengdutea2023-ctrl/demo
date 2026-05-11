@@ -374,6 +374,12 @@ label {
   margin: 4px 0 0;
 }
 
+.taskPicker strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .taskActions {
   display: flex;
   align-items: center;
@@ -452,6 +458,60 @@ label {
 
 .studentSurface {
   background: #eef7f5;
+}
+
+.previewSurface {
+  background: #f3f7fb;
+}
+
+.previewGrid {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.previewStage {
+  gap: 18px;
+}
+
+.previewPrompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(31, 157, 119, .2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--green);
+  background: #eaf8f3;
+  font-weight: 750;
+}
+
+.previewImage {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.previewImage img {
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  display: block;
+}
+
+.previewFeedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.previewFeedback svg {
+  flex: 0 0 auto;
+  color: var(--green);
 }
 
 .taskPicker {
@@ -612,7 +672,8 @@ label {
 @media (max-width: 900px) {
   .hero,
   .teacherGrid,
-  .studentGrid {
+  .studentGrid,
+  .previewGrid {
     grid-template-columns: 1fr;
   }
 
