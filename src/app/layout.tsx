@@ -1,0 +1,29 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "教育智能体测试1",
+  description: "面向儿童课堂任务的 AI 智能体"
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="zh-CN">
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+
+const criticalCss = `
+:root{--bg:#f5f7fb;--surface:#fff;--surface-strong:#eef3f8;--text:#1f2a37;--muted:#65758b;--line:#d8e1ea;--blue:#276ef1;--green:#1f9d77;--yellow:#d59120;--shadow:0 16px 40px rgba(31,42,55,.09)}
+*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:0}a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text);padding:12px 14px;outline:none}textarea{min-height:116px;resize:vertical}label{display:grid;gap:8px;color:var(--muted);font-size:14px;font-weight:650}
+.shell,.workspace,.displayWall{min-height:100vh;padding:24px}.studentSurface{background:#eef7f5}.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,520px);gap:36px;align-items:center;min-height:calc(100vh - 64px);max-width:1180px;margin:0 auto}.heroText h1{margin:8px 0 16px;font-size:64px;line-height:1}.heroText p{max-width:680px;color:var(--muted);font-size:20px;line-height:1.7}.eyebrow{color:var(--blue);font-size:13px;font-weight:800}.actions,.topNav nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.button{display:inline-flex;min-height:46px;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:8px;padding:0 18px;font-weight:800;cursor:pointer}.button.primary{background:var(--blue);color:#fff}.button.secondary{background:#fff;color:var(--text);border-color:var(--line)}.button.full{width:100%}
+.authShell{min-height:100vh;display:grid;place-items:center;padding:24px}.authCard,.panel,.heroPanel{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.authCard{width:min(100%,420px);display:grid;gap:18px;padding:28px}.authCard.wide{width:min(100%,720px)}.authCard h1,.panel h2,.topNav h1{margin:0}.formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.formMessage,.muted{color:var(--muted)}
+.topNav{max-width:1280px;margin:0 auto 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}.topNav nav a{color:var(--muted);font-weight:750}.teacherGrid,.studentGrid{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:390px minmax(0,1fr);gap:20px;align-items:start}.sideStack{display:grid;gap:20px}.panel{padding:20px;display:grid;gap:16px}.panel.compact{gap:12px}.panelTitle,.statusBar,.taskPreview,.taskHeader,.metricRow,.inputWithIcon{display:flex;align-items:center}.panelTitle{gap:10px}.taskHeader,.statusBar{justify-content:space-between;gap:16px}.iconButton{width:44px;height:44px;border:1px solid var(--line);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:#fff;color:var(--text);cursor:pointer}
+.taskCard,.submissionItem,.feedbackBox,.taskPicker{border:1px solid var(--line);border-radius:8px;background:#fbfcfe}.taskCard{display:grid;gap:12px;padding:16px}.taskPicker{width:100%;display:grid;gap:4px;text-align:left;padding:14px;cursor:pointer}.taskPicker.active{border-color:var(--green);background:#eaf8f3}.taskInstruction{margin:0;background:var(--surface-strong);border-radius:8px;padding:14px;line-height:1.7}.studentForm{display:grid;gap:16px}.feedbackBox{padding:14px;color:var(--text)}
+.displayWall{background:#172033;color:#fff}.displayWall header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:28px}.displayWall h1{font-size:52px;margin:6px 0 10px}.wallGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}.wallItem{overflow:hidden;border-radius:8px;background:#243149;border:1px solid rgba(255,255,255,.14)}.wallItem img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.wallItem div{padding:18px}
+@media (max-width:900px){.hero,.teacherGrid,.studentGrid{grid-template-columns:1fr}.heroText h1,.displayWall h1{font-size:42px}.formGrid{grid-template-columns:1fr}}@media (max-width:640px){.shell,.workspace,.displayWall{padding:16px}.topNav,.displayWall header{display:grid}}
+`;
