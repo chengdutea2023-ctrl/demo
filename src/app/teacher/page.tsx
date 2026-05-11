@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, KeyRound, MonitorUp, Play, Plus, RefreshCw, Square } from "lucide-react";
+import { Eye, KeyRound, MonitorUp, Play, Plus, RefreshCw, Square, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Template = {
@@ -120,6 +120,27 @@ export default function TeacherPage() {
       return;
     }
     setMessage("学生密码已修改。");
+  }
+
+  async function addStudentToClass(formData: FormData) {
+    const classExternalId = String(formData.get("classExternalId") ?? "");
+    const studentEmail = String(formData.get("studentEmail") ?? "");
+    setMessage("正在加入学生...");
+    const response = await fetch("/api/classes/members", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ classExternalId, studentEmail })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setMessage(data.message ?? data.error ?? "加入学生失败。");
+      return;
+    }
+    setMessage(`${data.student?.displayName ?? studentEmail} 已加入 ${data.classBinding?.name ?? "班级"}。`);
+    await load();
   }
 
   useEffect(() => {
@@ -250,6 +271,16 @@ export default function TeacherPage() {
                 </div>
               </div>
               <p>{task.instructions}</p>
+              <form action={addStudentToClass} className="inlineForm">
+                <input type="hidden" name="classExternalId" value={task.classBinding.externalClassId} />
+                <label>
+                  添加学生到这个班级
+                  <input name="studentEmail" type="email" placeholder="student@example.com" required />
+                </label>
+                <button className="button secondary" type="submit">
+                  <UserPlus size={18} /> 加入
+                </button>
+              </form>
               <div className="metricRow">
                 <strong>{task.submissions.length}</strong>
                 <span>份提交</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ImagePlus, Send, Sparkles } from "lucide-react";
+import { ImagePlus, Send, Sparkles, Tablet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type StudentTask = {
@@ -85,8 +85,14 @@ export default function StudentPage() {
 
       <section className="studentGrid">
         <aside className="panel compact">
-          <h2>任务列表</h2>
-          {tasks.length === 0 && <p className="muted">暂无可完成任务。</p>}
+          <h2>互动课堂</h2>
+          {tasks.length === 0 && (
+            <div className="emptyState">
+              <Tablet size={28} />
+              <strong>等待老师开始</strong>
+              <p>老师开始课堂任务，并把你的邮箱加入班级后，这里会出现可以完成的互动任务。</p>
+            </div>
+          )}
           {tasks.map((task) => (
             <button
               className={task.id === activeTaskId ? "taskPicker active" : "taskPicker"}
@@ -140,7 +146,11 @@ export default function StudentPage() {
               )}
             </>
           ) : (
-            <p className="muted">登录后会看到老师发布的任务。</p>
+            <div className="emptyState large">
+              <Sparkles size={36} />
+              <strong>还没有可进入的互动课堂</strong>
+              <p>请先确认已经用学生账号登录。课堂开始后，你可以在这里提交文字和图片作品，并收到 AI 的简短引导反馈。</p>
+            </div>
           )}
         </section>
       </section>

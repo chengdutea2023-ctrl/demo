@@ -386,6 +386,17 @@ label {
   min-height: 44px;
 }
 
+.inlineForm {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
 .statusPill {
   display: inline-flex;
   align-items: center;
@@ -495,6 +506,37 @@ label {
   margin-bottom: 0;
 }
 
+.emptyState {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--muted);
+  background: #fff;
+}
+
+.emptyState.large {
+  min-height: 320px;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.emptyState svg {
+  color: var(--green);
+}
+
+.emptyState strong {
+  color: var(--text);
+}
+
+.emptyState p {
+  margin: 0;
+  line-height: 1.7;
+}
+
 .displayWall {
   min-height: 100vh;
   padding: 32px;
@@ -598,5 +640,9 @@ label {
 
   .deviceFrame {
     min-height: 420px;
+  }
+
+  .inlineForm {
+    grid-template-columns: 1fr;
   }
 }
