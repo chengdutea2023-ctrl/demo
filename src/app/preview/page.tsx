@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, ImagePlus, Leaf, MessageCircleHeart, Microscope, Send, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 const previewTasks = [
   {
@@ -42,6 +42,7 @@ export default function PreviewPage() {
   const [text, setText] = useState(previewTasks[0].sample);
   const [imageUrl, setImageUrl] = useState("");
   const [feedback, setFeedback] = useState(previewTasks[0].guidance);
+  const stageRef = useRef<HTMLElement | null>(null);
   const activeTask = useMemo(
     () => previewTasks.find((task) => task.key === activeKey) ?? previewTasks[0],
     [activeKey]
@@ -53,6 +54,11 @@ export default function PreviewPage() {
     setText(nextTask.sample);
     setImageUrl("");
     setFeedback(nextTask.guidance);
+    window.setTimeout(() => {
+      if (window.innerWidth <= 900) {
+        stageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 0);
   }
 
   function generatePreviewFeedback() {
@@ -89,10 +95,12 @@ export default function PreviewPage() {
             const TaskIcon = task.icon;
             return (
               <button
-                className={task.key === activeTask.key ? "taskPicker active" : "taskPicker"}
+                aria-pressed={task.key === activeTask.key}
+                className={task.key === activeTask.key ? "previewChoice active" : "previewChoice"}
                 key={task.key}
                 type="button"
                 onClick={() => chooseTask(task.key)}
+                onPointerDown={() => chooseTask(task.key)}
               >
                 <span>{task.tag}</span>
                 <strong>
@@ -104,7 +112,7 @@ export default function PreviewPage() {
           })}
         </aside>
 
-        <section className="panel previewStage">
+        <section className="panel previewStage" ref={stageRef}>
           <div className="panelTitle">
             <Icon size={22} />
             <h2>{activeTask.title}</h2>

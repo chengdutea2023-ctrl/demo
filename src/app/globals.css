@@ -477,6 +477,45 @@ label {
   gap: 18px;
 }
 
+.previewChoice {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.previewChoice.active {
+  border-color: var(--green);
+  background: #eaf8f3;
+}
+
+.previewChoice span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.previewChoice strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.previewChoice em {
+  color: var(--yellow);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .previewPrompt {
   display: flex;
   align-items: center;
