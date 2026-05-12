@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-label="water action">
+  <rect width="180" height="150" rx="24" fill="#e8f8ff"/>
+  <path d="M0 112c30-13 57-13 86-1 37 16 64 12 94-9v48H0z" fill="#74d1e8"/>
+  <path d="M50 103c30-28 56-25 85-8" fill="none" stroke="#e9fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M83 30c19 26 29 45 29 62 0 19-13 31-30 31s-30-12-30-31c0-17 12-36 31-62z" fill="#45c7ee" stroke="#176c8c" stroke-width="6"/>
+  <path d="M74 83c3 10 10 15 21 14" fill="none" stroke="#e9fbff" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="130" cy="117" rx="14" ry="7" fill="#ffcf5a"/>
+  <path d="M116 117l-12-8v16z" fill="#ff9e4a"/>
+</svg>

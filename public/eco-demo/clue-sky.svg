@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" role="img" aria-label="sky clue">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#bdeefe"/>
+      <stop offset="1" stop-color="#fff8d9"/>
+    </linearGradient>
+  </defs>
+  <rect width="220" height="150" rx="24" fill="url(#bg)"/>
+  <circle cx="166" cy="43" r="25" fill="#ffcf5a"/>
+  <path d="M55 68c4-17 18-25 34-18 8-16 30-14 37 4 19-3 34 9 36 27H48c-7 0-11-5-9-12 2-7 8-10 16-1z" fill="#ffffff" stroke="#8ecbdd" stroke-width="4"/>
+  <path d="M80 96l-11 22M112 96l-9 22M144 96l-11 22" stroke="#52c2e8" stroke-width="6" stroke-linecap="round" stroke-dasharray="1 12"/>
+  <path d="M0 124c36-14 65-16 99-5 42 13 82 13 121-5v36H0z" fill="#9edc75"/>
+</svg>

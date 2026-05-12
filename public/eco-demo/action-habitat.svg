@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 150" role="img" aria-label="habitat action">
+  <rect width="180" height="150" rx="24" fill="#f0f8ff"/>
+  <path d="M0 114c32-13 62-12 94-1 35 13 61 10 86-8v45H0z" fill="#aadd78"/>
+  <path d="M93 119V66" stroke="#805337" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="93" cy="58" r="34" fill="#45b878" stroke="#18794e" stroke-width="5"/>
+  <path d="M66 122c18-28 39-28 57 0" fill="#bd7842" stroke="#744523" stroke-width="6"/>
+  <circle cx="95" cy="116" r="14" fill="#fff0c8" stroke="#744523" stroke-width="4"/>
+  <path d="M61 39q15-14 30 0q-15-7-30 0q-15-7-30 0q15-14 30 0" fill="none" stroke="#24405f" stroke-width="5" stroke-linecap="round"/>
+  <path d="M135 54q13-13 26 0q-13-6-26 0q-13-6-26 0q13-13 26 0" fill="none" stroke="#24405f" stroke-width="5" stroke-linecap="round"/>
+</svg>

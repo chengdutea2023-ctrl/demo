@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ImagePlus, Leaf, MessageCircleHeart, Microscope, Send, Sparkles } from "lucide-react";
+import { ArrowLeft, ImagePlus, Leaf, MessageCircleHeart, Microscope, Send, Sparkles, Trees } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 const previewTasks = [
@@ -85,6 +85,9 @@ export default function PreviewPage() {
           </Link>
           <Link href="/student">学生端</Link>
           <Link href="/teacher">教师后台</Link>
+          <Link href="/eco-demo">
+            <Trees size={18} /> 生态探险课
+          </Link>
         </nav>
       </header>
 

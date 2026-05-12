@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" role="img" aria-label="animals clue">
+  <rect width="220" height="150" rx="24" fill="#e8f7ff"/>
+  <path d="M0 107c43-22 80-18 117-5 39 13 66 12 103-6v54H0z" fill="#b9dd7e"/>
+  <path d="M50 75q18-18 36 0q-18-8-36 0q-18-8-36 0q18-18 36 0" fill="none" stroke="#24405f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M156 66q16-16 32 0q-16-7-32 0q-16-7-32 0q16-16 32 0" fill="none" stroke="#24405f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M105 111c16-22 44-22 59 0" fill="#d28b48" stroke="#744523" stroke-width="5"/>
+  <circle cx="134" cy="106" r="17" fill="#fff2c8" stroke="#744523" stroke-width="4"/>
+  <path d="M126 104h16" stroke="#744523" stroke-width="4" stroke-linecap="round"/>
+  <path d="M92 117c-7 12-24 15-35 4" fill="none" stroke="#2c8f62" stroke-width="8" stroke-linecap="round"/>
+  <path d="M178 119c8 10 23 10 31 0" fill="none" stroke="#2c8f62" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="70" cy="45" r="8" fill="#ffcf5a"/>
+</svg>
