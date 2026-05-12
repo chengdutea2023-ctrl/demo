@@ -18,6 +18,7 @@ import {
   VolumeX,
   Waves
 } from "lucide-react";
+import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, PointerEvent, TouchEvent as ReactTouchEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./EcoDemo.module.css";
 
@@ -152,18 +153,26 @@ const actions: Array<{
 ];
 
 const hotspotPositions: Record<HotspotKey, { left: number; top: number }> = {
-  river: { left: 52.5, top: 61.5 },
-  forest: { left: 35.5, top: 55.5 },
-  animals: { left: 70.5, top: 48.5 },
+  river: { left: 52.5, top: 60.5 },
+  forest: { left: 39, top: 72.5 },
+  animals: { left: 34, top: 51.5 },
   sky: { left: 70, top: 18 },
-  trash: { left: 69.5, top: 73 }
+  trash: { left: 70.5, top: 76 }
+};
+
+const hotspotMapLabels: Record<HotspotKey, string> = {
+  river: "干浅河道",
+  forest: "森林空地",
+  animals: "高高树枝",
+  sky: "雨云很薄",
+  trash: "河岸垃圾"
 };
 
 const repairTargets: Record<ActionKey, { left: number; top: number }> = {
-  plant: { left: 35.5, top: 63 },
-  water: { left: 52.5, top: 73 },
-  cleanup: { left: 68.5, top: 73 },
-  habitat: { left: 73, top: 52 }
+  plant: { left: 39.5, top: 80 },
+  water: { left: 56.5, top: 67.5 },
+  cleanup: { left: 81, top: 72 },
+  habitat: { left: 27, top: 61 }
 };
 
 const initialReason = "我觉得树少了以后，土地会变热，水也更容易变少，所以要先种树并保护水源。";
@@ -171,6 +180,12 @@ const initialReason = "我觉得树少了以后，土地会变热，水也更容
 export default function EcoDemoPage() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<AudioState | null>(null);
+  const draggingLensRef = useRef(false);
+  const lensPointerIdRef = useRef<number | null>(null);
+  const lensRef = useRef({ left: 22, top: 27 });
+  const observedRef = useRef<HotspotKey[]>([]);
+  const selectedActionRef = useRef<ActionKey | null>(null);
+  const stageRef = useRef("observe");
   const [observed, setObserved] = useState<HotspotKey[]>([]);
   const [hypothesis, setHypothesis] = useState<HypothesisKey>("fewer-trees");
   const [causeChain, setCauseChain] = useState<CauseKey[]>([]);
@@ -178,6 +193,7 @@ export default function EcoDemoPage() {
   const [studentReason, setStudentReason] = useState(initialReason);
   const [selectedCause, setSelectedCause] = useState<CauseKey | null>(null);
   const [selectedAction, setSelectedAction] = useState<ActionKey | null>(null);
+  const [activeHotspot, setActiveHotspot] = useState<HotspotKey | null>(null);
   const [draggingLens, setDraggingLens] = useState(false);
   const [lens, setLens] = useState({ left: 22, top: 27 });
   const [coachNote, setCoachNote] = useState("");
@@ -200,6 +216,97 @@ export default function EcoDemoPage() {
       const audio = audioRef.current;
       if (audio?.musicTimer) window.clearInterval(audio.musicTimer);
       void audio?.context.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    observedRef.current = observed;
+  }, [observed]);
+
+  useEffect(() => {
+    selectedActionRef.current = selectedAction;
+  }, [selectedAction]);
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
+
+  useEffect(() => {
+    function handleMouseMove(event: globalThis.MouseEvent) {
+      if (!draggingLensRef.current) return;
+      event.preventDefault();
+      moveLensToPoint(event.clientX, event.clientY);
+    }
+
+    function handleMouseUp(event: globalThis.MouseEvent) {
+      if (!draggingLensRef.current) return;
+      event.preventDefault();
+      finishLensAtPoint(event.clientX, event.clientY);
+    }
+
+    function handleTouchMove(event: globalThis.TouchEvent) {
+      if (!draggingLensRef.current) return;
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      event.preventDefault();
+      moveLensToPoint(touch.clientX, touch.clientY);
+    }
+
+    function handleTouchEnd(event: globalThis.TouchEvent) {
+      if (!draggingLensRef.current) return;
+      const touch = event.changedTouches[0] ?? event.touches[0];
+      event.preventDefault();
+      finishLensAtPoint(touch?.clientX, touch?.clientY);
+    }
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", handleTouchEnd, { passive: false });
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, []);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const sceneElement = scene;
+
+    function handleNativePointerDown(event: globalThis.PointerEvent) {
+      if (selectedActionRef.current || stageRef.current === "summary" || !shouldStartSceneLensDrag(event.target)) return;
+      event.preventDefault();
+      beginLensDrag(event.pointerId, event.clientX, event.clientY, sceneElement);
+    }
+
+    function handleNativeMouseDown(event: globalThis.MouseEvent) {
+      if (selectedActionRef.current || stageRef.current === "summary" || !shouldStartSceneLensDrag(event.target)) return;
+      event.preventDefault();
+      beginLensDrag(null, event.clientX, event.clientY, sceneElement);
+    }
+
+    function handleNativeTouchStart(event: globalThis.TouchEvent) {
+      if (selectedActionRef.current || stageRef.current === "summary" || !shouldStartSceneLensDrag(event.target)) return;
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      event.preventDefault();
+      beginLensDrag(null, touch.clientX, touch.clientY, sceneElement);
+    }
+
+    scene.addEventListener("pointerdown", handleNativePointerDown);
+    scene.addEventListener("mousedown", handleNativeMouseDown);
+    scene.addEventListener("touchstart", handleNativeTouchStart, { passive: false });
+
+    return () => {
+      scene.removeEventListener("pointerdown", handleNativePointerDown);
+      scene.removeEventListener("mousedown", handleNativeMouseDown);
+      scene.removeEventListener("touchstart", handleNativeTouchStart);
     };
   }, []);
 
@@ -292,7 +399,7 @@ export default function EcoDemoPage() {
   }
 
   function collectObservation(key: HotspotKey) {
-    const alreadyObserved = observed.includes(key);
+    const alreadyObserved = observedRef.current.includes(key);
     setObserved((current) => (current.includes(key) ? current : [...current, key]));
     const clue = hotspots.find((item) => item.key === key);
     setCoachNote(clue ? `发现线索：${clue.short}。把它放进证据板，再找下一条证据。` : "");
@@ -301,28 +408,165 @@ export default function EcoDemoPage() {
 
   function updateLensFromPointer(clientX: number, clientY: number) {
     const rect = sceneRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect) return null;
     const left = clamp(((clientX - rect.left) / rect.width) * 100, 8, 92);
     const top = clamp(((clientY - rect.top) / rect.height) * 100, 10, 90);
-    setLens({ left, top });
+    const nextLens = { left, top };
+    lensRef.current = nextLens;
+    setLens(nextLens);
+    setActiveHotspot(findNearestHotspot(nextLens, 13)?.key ?? null);
+    return nextLens;
   }
 
-  function collectNearestHotspot() {
+  function findNearestHotspot(currentLens = lensRef.current, threshold = 13) {
     const nearest = hotspots
       .map((hotspot) => {
         const position = hotspotPositions[hotspot.key];
         return {
           hotspot,
-          distance: Math.hypot(position.left - lens.left, position.top - lens.top)
+          distance: Math.hypot(position.left - currentLens.left, position.top - currentLens.top)
         };
       })
       .sort((a, b) => a.distance - b.distance)[0];
 
-    if (nearest && nearest.distance < 13) {
-      collectObservation(nearest.hotspot.key);
+    return nearest && nearest.distance < threshold ? nearest.hotspot : null;
+  }
+
+  function collectNearestHotspot(currentLens = lensRef.current) {
+    const nearest = findNearestHotspot(currentLens, 13);
+
+    if (nearest) {
+      setActiveHotspot(nearest.key);
+      collectObservation(nearest.key);
     } else {
+      setActiveHotspot(null);
       setCoachNote("放大镜还没靠近线索。试着拖到闪光问号附近。");
     }
+  }
+
+  function scanHotspotWithLens(key: HotspotKey) {
+    const position = hotspotPositions[key];
+    lensRef.current = position;
+    setLens(position);
+    setActiveHotspot(key);
+    setCoachNote("放大镜正在扫描线索...");
+    window.setTimeout(() => collectObservation(key), 180);
+  }
+
+  function beginLensDrag(pointerId: number | null, clientX: number, clientY: number, captureTarget?: Element) {
+    draggingLensRef.current = true;
+    lensPointerIdRef.current = pointerId;
+    setDraggingLens(true);
+    updateLensFromPointer(clientX, clientY);
+    try {
+      if (pointerId !== null && captureTarget && "setPointerCapture" in captureTarget) {
+        captureTarget.setPointerCapture(pointerId);
+      }
+    } catch {
+      // Some embedded browsers do not expose pointer capture reliably.
+    }
+  }
+
+  function moveLensToPoint(clientX: number, clientY: number) {
+    if (!draggingLensRef.current) return;
+    updateLensFromPointer(clientX, clientY);
+  }
+
+  function finishLensAtPoint(clientX?: number, clientY?: number) {
+    if (!draggingLensRef.current) return;
+    const nextLens = typeof clientX === "number" && typeof clientY === "number" ? updateLensFromPointer(clientX, clientY) ?? lensRef.current : lensRef.current;
+    draggingLensRef.current = false;
+    lensPointerIdRef.current = null;
+    setDraggingLens(false);
+    collectNearestHotspot(nextLens);
+  }
+
+  function shouldStartSceneLensDrag(target: EventTarget | null) {
+    const element = target instanceof Element ? target : null;
+    if (!element) return true;
+    return !element.closest("button, a, textarea, input, select") && !element.closest("[data-repair-target='true']") && !element.closest("[data-hotspot='true']");
+  }
+
+  function startLensDrag(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    beginLensDrag(event.pointerId, event.clientX, event.clientY, event.currentTarget);
+  }
+
+  function startLensMouseDrag(event: ReactMouseEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    beginLensDrag(null, event.clientX, event.clientY);
+  }
+
+  function startLensTouchDrag(event: ReactTouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    if (!touch) return;
+    event.preventDefault();
+    event.stopPropagation();
+    beginLensDrag(null, touch.clientX, touch.clientY);
+  }
+
+  function startLensHtmlDrag(event: ReactDragEvent<HTMLDivElement>) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", "lens");
+    beginLensDrag(null, event.clientX, event.clientY);
+  }
+
+  function moveLensHtmlDrag(event: ReactDragEvent<HTMLDivElement>) {
+    if (!event.clientX && !event.clientY) return;
+    event.preventDefault();
+    moveLensToPoint(event.clientX, event.clientY);
+  }
+
+  function finishLensHtmlDrag(event: ReactDragEvent<HTMLDivElement>) {
+    if (!event.clientX && !event.clientY) {
+      finishLensAtPoint();
+      return;
+    }
+    event.preventDefault();
+    finishLensAtPoint(event.clientX, event.clientY);
+  }
+
+  function startSceneLensDrag(event: PointerEvent<HTMLDivElement>) {
+    if (selectedAction || stage === "summary") return;
+    if (!shouldStartSceneLensDrag(event.target)) return;
+    event.preventDefault();
+    beginLensDrag(event.pointerId, event.clientX, event.clientY, event.currentTarget);
+  }
+
+  function startSceneLensMouseDrag(event: ReactMouseEvent<HTMLDivElement>) {
+    if (selectedAction || stage === "summary" || !shouldStartSceneLensDrag(event.target)) return;
+    event.preventDefault();
+    beginLensDrag(null, event.clientX, event.clientY);
+  }
+
+  function startSceneLensTouchDrag(event: ReactTouchEvent<HTMLDivElement>) {
+    if (selectedAction || stage === "summary" || !shouldStartSceneLensDrag(event.target)) return;
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    if (!touch) return;
+    event.preventDefault();
+    beginLensDrag(null, touch.clientX, touch.clientY);
+  }
+
+  function moveLensDrag(event: PointerEvent<HTMLDivElement | HTMLButtonElement>) {
+    if (!draggingLensRef.current || (lensPointerIdRef.current !== null && lensPointerIdRef.current !== event.pointerId)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    updateLensFromPointer(event.clientX, event.clientY);
+  }
+
+  function finishLensDrag(event: PointerEvent<HTMLDivElement | HTMLButtonElement>) {
+    if (!draggingLensRef.current || (lensPointerIdRef.current !== null && lensPointerIdRef.current !== event.pointerId)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    finishLensAtPoint(event.clientX, event.clientY);
+  }
+
+  function moveLensBySceneClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (draggingLensRef.current || selectedAction || stage === "summary" || !shouldStartSceneLensDrag(event.target)) return;
+    const nextLens = updateLensFromPointer(event.clientX, event.clientY);
+    if (nextLens) collectNearestHotspot(nextLens);
   }
 
   function selectCauseCard(key: CauseKey) {
@@ -365,9 +609,20 @@ export default function EcoDemoPage() {
   }
 
   function selectActionCard(actionKey: ActionKey) {
+    if (appliedActions.includes(actionKey)) {
+      const action = actions.find((item) => item.key === actionKey);
+      setCoachNote(action ? `「${action.title}」已经完成了，可以继续选择别的修复工具。` : "");
+      playSound("select");
+      return;
+    }
+    if (selectedAction === actionKey) {
+      playSound("confirm");
+      applyAction(actionKey);
+      return;
+    }
     setSelectedAction(actionKey);
     const action = actions.find((item) => item.key === actionKey);
-    setCoachNote(action ? `已拿起「${action.title}」。小岛上「${action.targetLabel}」已经高亮，点那个目标完成投放。` : "");
+    setCoachNote(action ? `已拿起「${action.title}」。可以点小岛上的「${action.targetLabel}」，也可以再点一次这张工具卡确认投放。` : "");
     playSound("select");
     window.setTimeout(() => {
       sceneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -398,6 +653,28 @@ export default function EcoDemoPage() {
     }
     playSound("confirm");
     applyAction(actionKey);
+  }
+
+  function handleSceneRepairPointer(event: PointerEvent<HTMLDivElement>) {
+    if (!selectedAction || draggingLensRef.current || appliedActions.includes(selectedAction)) return;
+    const target = event.target as Element;
+    if (target.closest("[data-lens='true']") || target.closest("[data-repair-target='true']")) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const left = ((event.clientX - rect.left) / rect.width) * 100;
+    const top = ((event.clientY - rect.top) / rect.height) * 100;
+    const nearest = actions
+      .map((action) => {
+        const point = repairTargets[action.key];
+        const dx = left - point.left;
+        const dy = top - point.top;
+        return { key: action.key, distance: Math.sqrt(dx * dx + dy * dy) };
+      })
+      .sort((a, b) => a.distance - b.distance)[0];
+
+    if (nearest && nearest.distance < 14) {
+      handleTargetAction(nearest.key);
+    }
   }
 
   function resetDemo() {
@@ -541,7 +818,22 @@ export default function EcoDemoPage() {
             </div>
           </div>
 
-          <div ref={sceneRef} className={styles.islandScene} aria-label="生态小岛互动场景">
+          <div
+            ref={sceneRef}
+            className={styles.islandScene}
+            aria-label="生态小岛互动场景"
+            onPointerDown={startSceneLensDrag}
+            onMouseDown={startSceneLensMouseDrag}
+            onTouchStart={startSceneLensTouchDrag}
+            onClick={moveLensBySceneClick}
+            onPointerMove={moveLensDrag}
+            onPointerUp={(event) => {
+              const wasDraggingLens = draggingLensRef.current;
+              finishLensDrag(event);
+              if (!wasDraggingLens) handleSceneRepairPointer(event);
+            }}
+            onPointerCancel={finishLensDrag}
+          >
             <div className={styles.sceneRibbon}>
               <Sparkles size={16} />
               <span>{stage === "observe" ? `已发现 ${observed.length}/${hotspots.length} 条线索` : stage === "repair" ? "投放修复工具" : "观察小岛变化"}</span>
@@ -550,17 +842,36 @@ export default function EcoDemoPage() {
 
             {hotspots.map((hotspot) => {
               const isObserved = observed.includes(hotspot.key);
+              const isActive = activeHotspot === hotspot.key;
               return (
                 <div
-                  className={isObserved ? styles.hotspotButtonObserved : styles.hotspotButton}
+                  className={isObserved ? styles.hotspotButtonObserved : isActive ? styles.hotspotButtonActive : styles.hotspotButton}
                   key={hotspot.key}
                   style={{ left: `${hotspotPositions[hotspot.key].left}%`, top: `${hotspotPositions[hotspot.key].top}%` }}
+                  data-hotspot="true"
+                  data-hotspot-position={hotspot.key === "sky" || hotspot.key === "trash" ? "left" : hotspot.key === "forest" ? "bottom" : "top"}
                   data-testid={`hotspot-${hotspot.key}`}
-                  role="img"
+                  role="button"
+                  tabIndex={0}
                   aria-label={`观察${hotspot.label}`}
+                  onMouseEnter={() => setActiveHotspot(hotspot.key)}
+                  onMouseLeave={() => setActiveHotspot((current) => (current === hotspot.key ? null : current))}
+                  onFocus={() => setActiveHotspot(hotspot.key)}
+                  onBlur={() => setActiveHotspot((current) => (current === hotspot.key ? null : current))}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    scanHotspotWithLens(hotspot.key);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      scanHotspotWithLens(hotspot.key);
+                    }
+                  }}
                 >
                   <span className={styles.hotspotPulse} />
                   <span className={styles.hotspotDot}>{isObserved ? "✓" : "?"}</span>
+                  {isActive && <span className={styles.hotspotTooltip}>{hotspotMapLabels[hotspot.key]}</span>}
                 </div>
               );
             })}
@@ -568,15 +879,40 @@ export default function EcoDemoPage() {
             {actions.map((action) => {
               const applied = appliedActions.includes(action.key);
               const selected = selectedAction === action.key;
+              const visibleTarget = selected || applied;
+              if (!visibleTarget) return null;
               return (
                 <button
                   className={applied ? styles.repairTargetDone : selected ? styles.repairTargetSelected : styles.repairTarget}
                   key={action.key}
                   style={{ left: `${repairTargets[action.key].left}%`, top: `${repairTargets[action.key].top}%` }}
                   type="button"
+                  data-target={action.key}
+                  data-repair-target="true"
+                  data-target-active={selectedAction ? "true" : "false"}
                   data-testid={`target-${action.key}`}
                   aria-label={`投放到${action.targetLabel}`}
-                  onClick={() => handleTargetAction(action.key)}
+                  onPointerUp={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleTargetAction(action.key);
+                  }}
+                  onMouseUp={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleTargetAction(action.key);
+                  }}
+                  onTouchEnd={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleTargetAction(action.key);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleTargetAction(action.key);
+                    }
+                  }}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => {
                     event.preventDefault();
@@ -584,46 +920,50 @@ export default function EcoDemoPage() {
                   }}
                 >
                   {applied ? <CheckCircle2 size={20} /> : <MousePointer2 size={18} />}
-                  <span>{action.targetLabel}</span>
+                  {selected && <span>{action.targetLabel}</span>}
                 </button>
               );
             })}
 
-            <button
+            <div
               className={draggingLens ? styles.lensDragging : styles.lens}
               style={{ left: `${lens.left}%`, top: `${lens.top}%` }}
-              type="button"
+              data-lens="true"
+              draggable
+              role="button"
+              tabIndex={0}
               aria-label="拖动放大镜观察小岛"
-              onPointerDown={(event) => {
-                event.currentTarget.setPointerCapture(event.pointerId);
-                setDraggingLens(true);
-                updateLensFromPointer(event.clientX, event.clientY);
-              }}
-              onPointerMove={(event) => {
-                if (draggingLens) updateLensFromPointer(event.clientX, event.clientY);
-              }}
-              onPointerUp={(event) => {
-                event.currentTarget.releasePointerCapture(event.pointerId);
-                updateLensFromPointer(event.clientX, event.clientY);
-                setDraggingLens(false);
-                collectNearestHotspot();
+              onPointerDown={startLensDrag}
+              onMouseDown={startLensMouseDrag}
+              onTouchStart={startLensTouchDrag}
+              onPointerMove={moveLensDrag}
+              onPointerUp={finishLensDrag}
+              onPointerCancel={finishLensDrag}
+              onDragStart={startLensHtmlDrag}
+              onDrag={moveLensHtmlDrag}
+              onDragEnd={finishLensHtmlDrag}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  collectNearestHotspot();
+                }
               }}
             >
               <Eye size={30} />
-            </button>
+            </div>
             {observed.length === 0 && (
               <div
                 className={styles.lensBubble}
                 style={{ left: `calc(${lens.left}% + 56px)`, top: `calc(${lens.top}% - 64px)` }}
               >
-                拖动放大镜到问号上找线索
+                拖动或点击画面，让放大镜靠近问号
               </div>
             )}
           </div>
 
           <div className={styles.liveClue}>
             <MousePointer2 size={18} />
-            <span>{latestClue ? latestClue.clue : "拖动放大镜靠近问号，松手后就能收集第一条线索。"}</span>
+            <span>{latestClue ? latestClue.clue : "拖动放大镜，或直接点击画面把放大镜移到问号附近，就能收集第一条线索。"}</span>
           </div>
         </section>
 
@@ -631,7 +971,7 @@ export default function EcoDemoPage() {
           <div className={styles.stepCard}>
             <span className={styles.stepIndex}>03</span>
             <h2>修复工具箱</h2>
-            <p>拖一张工具卡到小岛目标点，或先点工具再点目标点。</p>
+            <p>先点工具卡，再点小岛目标点；如果目标不容易点，也可以再点一次工具卡确认投放。</p>
             <div className={styles.actionGrid}>
               {actions.map((action) => {
                 const Icon = action.icon;
@@ -655,7 +995,7 @@ export default function EcoDemoPage() {
                     <img className={styles.actionImage} src={action.image} alt="" aria-hidden="true" />
                     <strong>{action.title}</strong>
                     <span>{applied ? action.effect : `目标：${action.targetLabel}`}</span>
-                    {selected && !applied && <em className={styles.actionNudge}>去小岛点「{action.targetLabel}」</em>}
+                    {selected && !applied && <em className={styles.actionNudge}>再点此卡确认，或去小岛点「{action.targetLabel}」</em>}
                   </button>
                 );
               })}
@@ -830,10 +1170,11 @@ function EcoIsland({
       </g>
 
       <g className={hasHabitat ? styles.birdsShow : styles.birdsHide}>
-        <BirdShape x={668} y={246} />
-        <BirdShape x={734} y={292} />
-        <circle cx="675" cy="354" r="18" fill="#b2773e" />
-        <circle cx="675" cy="354" r="9" fill="#f5e7c1" />
+        <BirdShape x={286} y={302} />
+        <BirdShape x={382} y={318} />
+        <ellipse cx="334" cy="388" rx="30" ry="14" fill="#8f5c33" />
+        <ellipse cx="334" cy="384" rx="20" ry="9" fill="#f3dfaa" />
+        <path d="M308 384 C322 401 347 401 361 384" fill="none" stroke="#6f452a" strokeWidth="7" strokeLinecap="round" />
       </g>
 
       {hasWater && (
