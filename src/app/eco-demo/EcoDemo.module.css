@@ -10,6 +10,63 @@
   padding: 22px;
 }
 
+.coursewareGate {
+  width: min(680px, calc(100vw - 32px));
+  min-height: 460px;
+  margin: 8vh auto 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 16px;
+  text-align: center;
+  border: 2px solid rgba(34, 136, 169, .2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 24px 60px rgba(32, 95, 118, .18);
+  padding: 34px;
+}
+
+.coursewareGate img {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.coursewareGate span {
+  color: #167a5a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.coursewareGate h1 {
+  margin: 0;
+  color: #18364c;
+  font-size: 36px;
+}
+
+.coursewareGate p {
+  margin: 0;
+  color: #5d7084;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.coursewareGate div {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.coursewareGate a {
+  border: 2px solid rgba(34, 136, 169, .18);
+  border-radius: 8px;
+  background: #fff;
+  color: #18364c;
+  padding: 12px 18px;
+  font-weight: 900;
+}
+
 .header {
   max-width: 1500px;
   margin: 0 auto 18px;
@@ -180,6 +237,70 @@
 .flowStepDone span {
   background: #1f9d77;
   color: #fff;
+}
+
+.submitDock,
+.submitDockReady {
+  position: sticky;
+  top: 12px;
+  z-index: 30;
+  max-width: 1500px;
+  min-height: 76px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 3px solid rgba(255, 207, 90, .72);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 18px 36px rgba(24, 75, 101, .14);
+  padding: 12px 14px;
+  backdrop-filter: blur(10px);
+}
+
+.submitDockReady {
+  border-color: rgba(31, 157, 119, .56);
+  background: linear-gradient(135deg, rgba(232, 251, 240, .96), rgba(255, 249, 216, .96));
+}
+
+.submitDock div,
+.submitDockReady div {
+  display: grid;
+  gap: 4px;
+}
+
+.submitDock strong,
+.submitDockReady strong {
+  color: #172333;
+  font-size: 20px;
+}
+
+.submitDock span,
+.submitDockReady span {
+  color: #5d7084;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.submitDock button,
+.submitDockReady button {
+  min-width: 160px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 8px;
+  background: #1f9d77;
+  color: #fff;
+  padding: 0 18px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(31, 157, 119, .22);
+}
+
+.submitDock button:disabled,
+.submitDockReady button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
 }
 
 .board {
@@ -1004,6 +1125,49 @@
   box-shadow: inset 0 3px 0 rgba(39, 110, 140, .05);
 }
 
+.classSubmitCard {
+  display: grid;
+  gap: 12px;
+  border: 3px solid rgba(255, 207, 90, .75);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff9d8, #e9fff5);
+  box-shadow: 0 18px 40px rgba(60, 116, 89, .16);
+  padding: 18px;
+}
+
+.classSubmitCard h2 {
+  margin: 0;
+  color: #172333;
+  font-size: 28px;
+}
+
+.classSubmitCard p {
+  margin: 0;
+  color: #5d7084;
+  line-height: 1.65;
+  font-weight: 800;
+}
+
+.classSubmitCard button {
+  min-height: 52px;
+  border: 0;
+  border-radius: 8px;
+  background: #1f9d77;
+  color: #fff;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(31, 157, 119, .22);
+}
+
+.classSubmitCard button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.classSubmitCard strong {
+  color: #167a5a;
+}
+
 .bigScreen {
   max-width: 1500px;
   margin: 16px auto 0;
@@ -1026,6 +1190,37 @@
   margin: 0;
   color: #cfe8ee;
   line-height: 1.6;
+}
+
+.submitPanel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.submitPanel button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffcf5a;
+  color: #653900;
+  padding: 0 18px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, .16);
+}
+
+.submitPanel button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.submitPanel span {
+  color: #dff6ee;
+  font-size: 14px;
+  font-weight: 850;
 }
 
 .screenStats {
@@ -1156,6 +1351,17 @@
   .stageTop,
   .flowStrip {
     grid-template-columns: 1fr;
+  }
+
+  .submitDock,
+  .submitDockReady {
+    position: static;
+    display: grid;
+  }
+
+  .submitDock button,
+  .submitDockReady button {
+    width: 100%;
   }
 
   .board {

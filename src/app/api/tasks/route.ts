@@ -5,10 +5,12 @@ import { requireSessionUser } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
+const ECO_COURSEWARE_TEMPLATE_KEY = "eco-island-rescue";
+
 const createTaskSchema = z.object({
   templateKey: z.string().min(1),
-  classExternalId: z.string().min(1),
-  className: z.string().min(1),
+  classExternalId: z.string().min(1).optional(),
+  className: z.string().min(1).optional(),
   externalOrgId: z.string().optional(),
   title: z.string().min(1).max(80),
   instructions: z.string().min(1).max(600),
@@ -26,7 +28,10 @@ export async function GET(request: Request) {
 
     if (session.role === UserRole.TEACHER) {
       const [templates, tasks] = await Promise.all([
-        prisma.taskTemplate.findMany({ where: { isActive: true }, orderBy: { createdAt: "asc" } }),
+        prisma.taskTemplate.findMany({
+          where: { key: ECO_COURSEWARE_TEMPLATE_KEY, isActive: true },
+          orderBy: { createdAt: "asc" }
+        }),
         prisma.classTask.findMany({
           where: { teacherId: session.id },
           include: {
@@ -82,6 +87,9 @@ export async function POST(request: Request) {
     }
 
     const input = createTaskSchema.parse(await request.json());
+    if (input.templateKey !== ECO_COURSEWARE_TEMPLATE_KEY) {
+      return NextResponse.json({ error: "TEMPLATE_NOT_ALLOWED" }, { status: 400 });
+    }
 
     const template = await prisma.taskTemplate.findFirst({
       where: { key: input.templateKey, isActive: true }
@@ -90,17 +98,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "TEMPLATE_NOT_ALLOWED" }, { status: 400 });
     }
 
+    const classExternalId = input.classExternalId ?? `education-agent-default-class-${session.id}`;
+    const className = input.className ?? "默认课堂";
+
     const classBinding = await prisma.classBinding.upsert({
-      where: { externalClassId: input.classExternalId },
+      where: { externalClassId: classExternalId },
       update: {
-        name: input.className,
+        name: className,
         externalOrgId: input.externalOrgId,
         teacherId: session.id
       },
       create: {
-        externalClassId: input.classExternalId,
+        externalClassId: classExternalId,
         externalOrgId: input.externalOrgId,
-        name: input.className,
+        name: className,
         teacherId: session.id
       }
     });
@@ -162,6 +173,7 @@ export async function PATCH(request: Request) {
 function canTransitionTask(current: TaskStatus, next: TaskStatus) {
   if (current === next) return true;
   if (current === TaskStatus.DRAFT && next === TaskStatus.ACTIVE) return true;
+  if (current === TaskStatus.CLOSED && next === TaskStatus.ACTIVE) return true;
   if (current === TaskStatus.ACTIVE && next === TaskStatus.CLOSED) return true;
   return false;
 }

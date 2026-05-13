@@ -75,3 +75,7 @@ export async function requireSessionUser(request?: Request) {
 export function sessionCookie(token: string) {
   return `${sessionCookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`;
 }
+
+export function clearSessionCookie() {
+  return `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+}

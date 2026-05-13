@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, KeyRound, MonitorUp, Play, Plus, RefreshCw, Square, UserPlus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Eye, KeyRound, LogOut, MonitorUp, Play, Plus, RefreshCw, Square, Trees, UserRound, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+const ECO_COURSEWARE_TEMPLATE_KEY = "eco-island-rescue";
 
 type Template = {
   key: string;
@@ -16,7 +19,7 @@ type TeacherTask = {
   instructions: string;
   status: "DRAFT" | "ACTIVE" | "CLOSED";
   displayEnabled: boolean;
-  template: { title: string };
+  template: { key: string; title: string };
   classBinding: { name: string; externalClassId: string };
   submissions: Array<{
     id: string;
@@ -28,30 +31,60 @@ type TeacherTask = {
   }>;
 };
 
+type RegisteredStudent = {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string;
+  status: "ACTIVE" | "DISABLED";
+  ageBand: string;
+  createdAt: string;
+};
+
+type CurrentTeacher = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: "TEACHER" | "STUDENT";
+};
+
 export default function TeacherPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [tasks, setTasks] = useState<TeacherTask[]>([]);
+  const [students, setStudents] = useState<RegisteredStudent[]>([]);
+  const [currentTeacher, setCurrentTeacher] = useState<CurrentTeacher | null>(null);
+  const [selectedStudentIdsByTask, setSelectedStudentIdsByTask] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-
-  const token = useMemo(
-    () => (typeof window === "undefined" ? "" : localStorage.getItem("education_agent_token") ?? ""),
-    []
-  );
+  const [authenticated, setAuthenticated] = useState(true);
 
   async function load() {
     setLoading(true);
-    const response = await fetch("/api/tasks", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
+    const headers = getAuthHeaders();
+    const [response, studentsResponse, meResponse] = await Promise.all([
+      fetch("/api/tasks", { headers }),
+      fetch("/api/students", { headers }),
+      fetch("/api/auth/me", { headers })
+    ]);
     if (response.status === 401) {
       setMessage("请先登录教师账号。");
+      setAuthenticated(false);
+      setTemplates([]);
+      setTasks([]);
+      setStudents([]);
+      setCurrentTeacher(null);
       setLoading(false);
       return;
     }
     const data = await response.json();
+    const studentData = studentsResponse.ok ? await studentsResponse.json() : { students: [] };
+    const meData = meResponse.ok ? await meResponse.json() : { user: null };
     setTemplates(data.templates ?? []);
     setTasks(data.tasks ?? []);
+    setStudents(studentData.students ?? []);
+    setCurrentTeacher(meData.user ?? null);
+    setAuthenticated(true);
     setLoading(false);
   }
 
@@ -61,13 +94,10 @@ export default function TeacherPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...getAuthHeaders()
       },
       body: JSON.stringify({
         templateKey: formData.get("templateKey"),
-        classExternalId: formData.get("classExternalId"),
-        className: formData.get("className"),
-        externalOrgId: formData.get("externalOrgId") || undefined,
         title: formData.get("title"),
         instructions: formData.get("instructions"),
         displayEnabled: formData.get("displayEnabled") === "on"
@@ -88,7 +118,7 @@ export default function TeacherPage() {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...getAuthHeaders()
       },
       body: JSON.stringify({ taskId, status })
     });
@@ -107,7 +137,7 @@ export default function TeacherPage() {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...getAuthHeaders()
       },
       body: JSON.stringify({
         usernameOrEmail: formData.get("usernameOrEmail"),
@@ -122,29 +152,92 @@ export default function TeacherPage() {
     setMessage("学生密码已修改。");
   }
 
-  async function addStudentToClass(formData: FormData) {
-    const classExternalId = String(formData.get("classExternalId") ?? "");
-    const studentEmail = String(formData.get("studentEmail") ?? "");
+  function toggleStudentSelection(taskId: string, studentId: string) {
+    setSelectedStudentIdsByTask((current) => {
+      const selected = current[taskId] ?? [];
+      return {
+        ...current,
+        [taskId]: selected.includes(studentId)
+          ? selected.filter((id) => id !== studentId)
+          : [...selected, studentId]
+      };
+    });
+  }
+
+  function selectAllStudents(taskId: string) {
+    setSelectedStudentIdsByTask((current) => ({
+      ...current,
+      [taskId]: students.filter((student) => student.status === "ACTIVE").map((student) => student.id)
+    }));
+  }
+
+  function invertStudentSelection(taskId: string) {
+    setSelectedStudentIdsByTask((current) => {
+      const selected = current[taskId] ?? [];
+      const activeIds = students.filter((student) => student.status === "ACTIVE").map((student) => student.id);
+      return {
+        ...current,
+        [taskId]: activeIds.filter((id) => !selected.includes(id))
+      };
+    });
+  }
+
+  async function addStudentsToClass(task: TeacherTask) {
+    const studentIds = selectedStudentIdsByTask[task.id] ?? [];
+    if (studentIds.length === 0) {
+      setMessage("请先勾选要加入的学生。");
+      return;
+    }
     setMessage("正在加入学生...");
     const response = await fetch("/api/classes/members", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...getAuthHeaders()
       },
-      body: JSON.stringify({ classExternalId, studentEmail })
+      body: JSON.stringify({ classExternalId: task.classBinding.externalClassId, studentIds })
     });
     const data = await response.json();
     if (!response.ok) {
       setMessage(data.message ?? data.error ?? "加入学生失败。");
       return;
     }
-    setMessage(`${data.student?.displayName ?? studentEmail} 已加入 ${data.classBinding?.name ?? "班级"}。`);
+    const names = (data.students ?? []).map((student: { displayName: string }) => student.displayName).join("、");
+    setMessage(`${names || `${studentIds.length} 名学生`} 已加入 ${data.classBinding?.name ?? "班级"}。`);
     await load();
+  }
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+    localStorage.removeItem("education_agent_token");
+    setAuthenticated(false);
+    setCurrentTeacher(null);
+    setTemplates([]);
+    setTasks([]);
+    setStudents([]);
+    setSelectedStudentIdsByTask({});
+    setMessage("已退出教师账号。");
+    router.push("/teacher/login");
   }
 
   useEffect(() => {
     load();
+
+    function refreshOnFocus() {
+      load();
+    }
+
+    function refreshOnVisible() {
+      if (document.visibilityState === "visible") load();
+    }
+
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnVisible);
+
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnVisible);
+    };
   }, []);
 
   return (
@@ -155,15 +248,37 @@ export default function TeacherPage() {
           <h1>课堂任务管理</h1>
         </div>
         <nav>
+          {currentTeacher && (
+            <div className="teacherIdentity" aria-label="当前登录教师">
+              <span>当前教师</span>
+              <strong>{currentTeacher.displayName}</strong>
+              <em>{currentTeacher.email}</em>
+            </div>
+          )}
           <Link href="/student">学生端</Link>
           <Link href="/">首页</Link>
+          {authenticated && (
+            <button className="button secondary" type="button" onClick={logout}>
+              <LogOut size={18} /> 退出登录
+            </button>
+          )}
           <button className="iconButton" aria-label="刷新" onClick={load}>
             <RefreshCw size={18} />
           </button>
         </nav>
       </header>
 
-      <section className="teacherGrid">
+      {!authenticated && (
+        <section className="panel authNotice">
+          <strong>当前还没有登录教师账号</strong>
+          <p>登录后才能读取任务模板、任务列表和已注册学生。</p>
+          <button className="button primary" type="button" onClick={() => router.push("/teacher/login")}>
+            去登录教师后台
+          </button>
+        </section>
+      )}
+
+      {authenticated && <section className="teacherGrid">
         <aside className="sideStack">
           <form action={createTask} className="panel">
             <div className="panelTitle">
@@ -175,30 +290,18 @@ export default function TeacherPage() {
               <select name="templateKey" required>
                 {templates.map((template) => (
                   <option key={template.key} value={template.key}>
-                    {template.title}
+                    {template.key === ECO_COURSEWARE_TEMPLATE_KEY ? `互动课件｜${template.title}` : template.title}
                   </option>
                 ))}
               </select>
             </label>
             <label>
               任务标题
-              <input name="title" placeholder="观察校园里的一张照片" required />
-            </label>
-            <label>
-              班级 ID
-              <input name="classExternalId" placeholder="base-class-id" required />
-            </label>
-            <label>
-              班级名称
-              <input name="className" placeholder="三年级 1 班" required />
-            </label>
-            <label>
-              机构 ID
-              <input name="externalOrgId" placeholder="可选" />
+              <input name="title" placeholder="AI 生态探险课：拯救小岛生态" required />
             </label>
             <label>
               给学生的说明
-              <textarea name="instructions" placeholder="请写下你看到了什么，再补充一个你想到的小故事。" required />
+              <textarea name="instructions" placeholder="拖动放大镜找证据，排列生态因果链，再把修复工具投放到小岛上。" required />
             </label>
             <label className="checkRow">
               <input name="displayEnabled" type="checkbox" />
@@ -209,6 +312,23 @@ export default function TeacherPage() {
             </button>
             {message && <p className="formMessage">{message}</p>}
           </form>
+
+          <section className="panel">
+            <div className="panelTitle">
+              <UserRound size={20} />
+              <h2>已注册学生</h2>
+            </div>
+            <p className="muted">当前智能体本地已注册 {students.length} 名学生。</p>
+            <div className="studentRegistry">
+              {students.map((student) => (
+                <article className="studentRegistryItem" key={student.id}>
+                  <strong>{student.displayName}</strong>
+                  <span>{student.ageBand || "未填写年龄段"} · {student.status === "ACTIVE" ? "正常" : "停用"}</span>
+                </article>
+              ))}
+              {!loading && students.length === 0 && <p className="muted">暂无学生注册。</p>}
+            </div>
+          </section>
 
           <form action={updateStudentPassword} className="panel">
             <div className="panelTitle">
@@ -236,68 +356,110 @@ export default function TeacherPage() {
           </div>
           {loading && <p className="muted">正在读取任务...</p>}
           {!loading && tasks.length === 0 && <p className="muted">暂无任务。请先创建课堂任务。</p>}
-          {tasks.map((task) => (
-            <article className="taskCard" key={task.id}>
-              <div className="taskHeader">
-                <div>
-                  <span>{task.classBinding.name}</span>
-                  <h3>{task.title}</h3>
-                  <b className={`statusPill status${task.status}`}>{taskStatusText(task.status)}</b>
-                </div>
-                <div className="taskActions">
-                  {task.status === "DRAFT" && (
-                    <button
-                      className="button primary"
-                      type="button"
-                      onClick={() => updateTaskStatus(task.id, "ACTIVE")}
-                    >
-                      <Play size={18} /> 开始
-                    </button>
-                  )}
-                  {task.status === "ACTIVE" && (
-                    <button
-                      className="button secondary"
-                      type="button"
-                      onClick={() => updateTaskStatus(task.id, "CLOSED")}
-                    >
-                      <Square size={18} /> 结束
-                    </button>
-                  )}
-                  {task.displayEnabled && (
-                    <Link className="iconButton" aria-label="打开大屏" href={`/display/${task.id}`}>
-                      <MonitorUp size={18} />
-                    </Link>
-                  )}
-                </div>
-              </div>
-              <p>{task.instructions}</p>
-              <form action={addStudentToClass} className="inlineForm">
-                <input type="hidden" name="classExternalId" value={task.classBinding.externalClassId} />
-                <label>
-                  添加学生到这个班级
-                  <input name="studentEmail" type="email" placeholder="student@example.com" required />
-                </label>
-                <button className="button secondary" type="submit">
-                  <UserPlus size={18} /> 加入
-                </button>
-              </form>
-              <div className="metricRow">
-                <strong>{task.submissions.length}</strong>
-                <span>份提交</span>
-              </div>
-              <div className="submissionList">
-                {task.submissions.map((submission) => (
-                  <div className="submissionItem" key={submission.id}>
-                    <strong>{submission.student.displayName}</strong>
-                    <p>{submission.textContent}</p>
-                    {submission.aiFeedback && <span>{submission.aiFeedback.guidance}</span>}
+          {tasks.map((task) => {
+            const isCourseware = task.template.key === ECO_COURSEWARE_TEMPLATE_KEY;
+            return (
+              <article className="taskCard" key={task.id}>
+                <div className="taskHeader">
+                  <div>
+                    <span>{task.classBinding.name}</span>
+                    <h3>{task.title}</h3>
+                    <b className={`statusPill status${task.status}`}>{taskStatusText(task.status)}</b>
+                    {isCourseware && <b className="statusPill coursewarePill">互动课件</b>}
                   </div>
-                ))}
-              </div>
-            </article>
-          ))}
+                  <div className="taskActions">
+                    {isCourseware && (
+                      <Link className="button secondary" href={`/eco-demo?taskId=${task.id}`}>
+                        <Trees size={18} /> 预览课件
+                      </Link>
+                    )}
+                    {(task.status === "DRAFT" || task.status === "CLOSED") && (
+                      <button
+                        className="button primary"
+                        type="button"
+                        onClick={() => updateTaskStatus(task.id, "ACTIVE")}
+                      >
+                        <Play size={18} /> {task.status === "CLOSED" ? "重新开始" : "开始"}
+                      </button>
+                    )}
+                    {task.status === "ACTIVE" && (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => updateTaskStatus(task.id, "CLOSED")}
+                      >
+                        <Square size={18} /> 结束
+                      </button>
+                    )}
+                    {task.displayEnabled && (
+                      <Link className="iconButton" aria-label="打开大屏" href={`/display/${task.id}`}>
+                        <MonitorUp size={18} />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+                <p>{task.instructions}</p>
+                <div className="studentPicker">
+                  <div className="studentPickerHeader">
+                    <strong>添加学生到这个班级</strong>
+                    <div>
+                      <button className="textButton" type="button" onClick={() => selectAllStudents(task.id)}>
+                        全选
+                      </button>
+                      <button className="textButton" type="button" onClick={() => invertStudentSelection(task.id)}>
+                        反选
+                      </button>
+                    </div>
+                  </div>
+                  <div className="studentCheckboxGrid">
+                    {students.map((student) => {
+                      const checked = (selectedStudentIdsByTask[task.id] ?? []).includes(student.id);
+                      return (
+                        <label className="studentCheck" key={student.id}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={student.status !== "ACTIVE"}
+                            onChange={() => toggleStudentSelection(task.id, student.id)}
+                          />
+                          <span>{student.displayName}</span>
+                        </label>
+                      );
+                    })}
+                    {!loading && students.length === 0 && <p className="muted">暂无可添加学生。</p>}
+                  </div>
+                  <button className="button secondary" type="button" onClick={() => addStudentsToClass(task)}>
+                    <UserPlus size={18} /> 加入选中学生
+                  </button>
+                </div>
+                <div className="metricRow">
+                  <strong>{task.submissions.length}</strong>
+                  <span>份提交</span>
+                </div>
+                <div className="submissionList">
+                  {task.submissions.length === 0 && (
+                    <p className="muted">暂无学生提交。学生完成课件并点击“提交给老师”后，这里会出现“投屏点评”。</p>
+                  )}
+                  {task.submissions.map((submission) => (
+                    <div className="submissionItem" key={submission.id}>
+                      <div className="submissionHeader">
+                        <strong>{submission.student.displayName}</strong>
+                        {isCourseware && (
+                          <Link className="button secondary" href={`/display/courseware/${submission.id}`}>
+                            <MonitorUp size={18} /> 投屏点评
+                          </Link>
+                        )}
+                      </div>
+                      <p>{submission.textContent}</p>
+                      {submission.aiFeedback && <span>{submission.aiFeedback.guidance}</span>}
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
         </section>
-      </section>
+      </section>}
     </main>
   );
 }
@@ -306,4 +468,10 @@ function taskStatusText(status: TeacherTask["status"]) {
   if (status === "DRAFT") return "准备中";
   if (status === "ACTIVE") return "进行中";
   return "已结束";
+}
+
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("education_agent_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }

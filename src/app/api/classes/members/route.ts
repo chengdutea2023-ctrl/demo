@@ -5,10 +5,15 @@ import { requireSessionUser } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
-const addClassMemberSchema = z.object({
-  classExternalId: z.string().min(1),
-  studentEmail: z.string().email()
-});
+const addClassMemberSchema = z
+  .object({
+    classExternalId: z.string().min(1),
+    studentEmail: z.string().email().optional(),
+    studentIds: z.array(z.string().min(1)).optional()
+  })
+  .refine((input) => input.studentEmail || input.studentIds?.length, {
+    message: "请选择学生。"
+  });
 
 export async function POST(request: Request) {
   try {
@@ -29,41 +34,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "CLASS_NOT_FOUND" }, { status: 404 });
     }
 
-    const student = await prisma.user.findFirst({
-      where: {
-        email: input.studentEmail.toLowerCase(),
-        role: UserRole.STUDENT,
-        status: "ACTIVE"
-      },
-      select: {
-        id: true,
-        email: true,
-        displayName: true
-      }
-    });
+    const studentIds = Array.from(new Set(input.studentIds ?? []));
+    const students = input.studentEmail
+      ? await prisma.user.findMany({
+          where: {
+            email: input.studentEmail.toLowerCase(),
+            role: UserRole.STUDENT,
+            status: "ACTIVE"
+          },
+          select: {
+            id: true,
+            email: true,
+            displayName: true
+          }
+        })
+      : await prisma.user.findMany({
+          where: {
+            id: { in: studentIds },
+            role: UserRole.STUDENT,
+            status: "ACTIVE"
+          },
+          select: {
+            id: true,
+            email: true,
+            displayName: true
+          }
+        });
 
-    if (!student) {
+    if (students.length === 0) {
       return NextResponse.json({ error: "STUDENT_NOT_FOUND" }, { status: 404 });
     }
 
-    const member = await prisma.classMember.upsert({
-      where: {
-        classBindingId_userId: {
-          classBindingId: classBinding.id,
-          userId: student.id
-        }
-      },
-      update: { externalRole: "STUDENT" },
-      create: {
-        classBindingId: classBinding.id,
-        userId: student.id,
-        externalRole: "STUDENT"
-      }
-    });
+    const members = await prisma.$transaction(
+      students.map((student) =>
+        prisma.classMember.upsert({
+          where: {
+            classBindingId_userId: {
+              classBindingId: classBinding.id,
+              userId: student.id
+            }
+          },
+          update: { externalRole: "STUDENT" },
+          create: {
+            classBindingId: classBinding.id,
+            userId: student.id,
+            externalRole: "STUDENT"
+          }
+        })
+      )
+    );
 
     return NextResponse.json({
-      member,
-      student,
+      members,
+      students,
       classBinding: {
         id: classBinding.id,
         externalClassId: classBinding.externalClassId,

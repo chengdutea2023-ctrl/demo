@@ -346,10 +346,54 @@ label {
   min-height: 520px;
 }
 
+.teacherIdentity {
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  max-width: 260px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.teacherIdentity span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.teacherIdentity strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.teacherIdentity em {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.authNotice {
+  max-width: 860px;
+  margin: 0 auto 20px;
+}
+
+.authNotice p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .taskCard,
 .submissionItem,
 .feedbackBox,
-.taskPicker {
+.taskPicker,
+.studentRegistryItem {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfcfe;
@@ -403,6 +447,86 @@ label {
   background: #fff;
 }
 
+.studentPicker {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.studentPickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.studentPickerHeader > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.textButton {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--green);
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.studentCheckboxGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.studentCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.studentCheck input {
+  width: 18px;
+  height: 18px;
+}
+
+.studentCheck:has(input:checked) {
+  border-color: rgba(31, 157, 119, .32);
+  background: #eaf8f3;
+  color: var(--green);
+}
+
+.studentCheck:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.submissionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .statusPill {
   display: inline-flex;
   align-items: center;
@@ -428,6 +552,13 @@ label {
   border-color: rgba(101, 117, 139, .26);
   color: var(--muted);
   background: var(--surface-strong);
+}
+
+.coursewarePill {
+  margin-left: 8px;
+  border-color: rgba(31, 157, 119, .24);
+  color: var(--green);
+  background: #eaf8f3;
 }
 
 .metricRow {
@@ -601,6 +732,51 @@ label {
   color: var(--text);
 }
 
+.coursewareLaunch {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(31, 157, 119, .22);
+  border-radius: 8px;
+  padding: 18px;
+  background: #eaf8f3;
+}
+
+.coursewareLaunch > svg {
+  color: var(--green);
+}
+
+.coursewareLaunch p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.studentRegistry {
+  display: grid;
+  gap: 10px;
+}
+
+.studentRegistryItem {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.studentRegistryItem strong {
+  color: var(--text);
+}
+
+.studentRegistryItem span,
+.studentRegistryItem em {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
 .feedbackBox p {
   margin-bottom: 0;
 }
@@ -708,17 +884,143 @@ label {
   color: #dce6f1;
 }
 
+.coursewareDisplayWall {
+  min-height: 100vh;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 207, 90, .22), transparent 28%),
+    linear-gradient(135deg, #0f3142, #195d70 48%, #23745e);
+  color: #fff;
+}
+
+.coursewareDisplayWall header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.coursewareDisplayWall header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #9be3c9;
+  font-weight: 900;
+}
+
+.coursewareDisplayWall h1 {
+  margin: 8px 0 8px;
+  font-size: 52px;
+  line-height: 1.06;
+}
+
+.coursewareDisplayWall header p {
+  margin: 0;
+  color: #dce6f1;
+  font-size: 20px;
+}
+
+.coursewareDisplayGrid {
+  display: grid;
+  grid-template-columns: minmax(320px, .9fr) repeat(2, minmax(280px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.coursewareScorePanel,
+.coursewareDisplayCard {
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .12);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, .16);
+  padding: 22px;
+}
+
+.coursewareScorePanel {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  min-height: 320px;
+}
+
+.coursewareScorePanel span,
+.coursewareDisplayCard span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #9be3c9;
+  font-weight: 900;
+}
+
+.coursewareScorePanel strong {
+  font-size: 84px;
+  line-height: .92;
+}
+
+.coursewareScorePanel div {
+  overflow: hidden;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+}
+
+.coursewareScorePanel i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #ffcf5a;
+}
+
+.coursewareScorePanel p,
+.coursewareDisplayCard p {
+  margin: 0;
+  color: #ecfbff;
+  font-size: 20px;
+  line-height: 1.65;
+}
+
+.coursewareDisplayCard {
+  display: grid;
+  gap: 14px;
+  min-height: 220px;
+}
+
+.coursewareDisplayCard div {
+  display: grid;
+  gap: 10px;
+}
+
+.coursewareDisplayCard strong {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .16);
+  padding: 12px 14px;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.coursewareDisplayCard.wide {
+  grid-column: span 2;
+}
+
 @media (max-width: 900px) {
   .hero,
   .teacherGrid,
   .studentGrid,
-  .previewGrid {
+  .previewGrid,
+  .coursewareDisplayGrid {
     grid-template-columns: 1fr;
   }
 
   .heroText h1,
-  .displayWall h1 {
+  .displayWall h1,
+  .coursewareDisplayWall h1 {
     font-size: 42px;
+  }
+
+  .coursewareDisplayCard.wide {
+    grid-column: auto;
   }
 
   .formGrid {
@@ -743,6 +1045,10 @@ label {
   }
 
   .inlineForm {
+    grid-template-columns: 1fr;
+  }
+
+  .coursewareLaunch {
     grid-template-columns: 1fr;
   }
 }

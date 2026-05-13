@@ -27,11 +27,20 @@ type ActionKey = "plant" | "water" | "cleanup" | "habitat";
 type HypothesisKey = "less-rain" | "fewer-trees" | "pollution" | "no-habitat";
 type CauseKey = "fewer-trees" | "hot-ground" | "water-loss" | "animals-leave";
 type SoundEffect = "discover" | "select" | "place" | "confirm" | "repair" | "error";
+type CoursewareRole = "TEACHER" | "STUDENT";
 type AudioState = {
   context: AudioContext;
   master: GainNode;
   musicTimer: number | null;
   noteIndex: number;
+};
+type EcoCoursewareTask = {
+  id: string;
+  title: string;
+  instructions: string;
+  status: "DRAFT" | "ACTIVE" | "CLOSED";
+  className: string;
+  templateTitle: string;
 };
 
 const hotspots: Array<{
@@ -105,6 +114,20 @@ const causeCards: Array<{
 
 const causeOrder: CauseKey[] = ["fewer-trees", "hot-ground", "water-loss", "animals-leave"];
 
+const hypothesisLabels: Record<HypothesisKey, string> = {
+  "less-rain": "下雨变少",
+  "fewer-trees": "树木减少",
+  pollution: "水边垃圾",
+  "no-habitat": "栖息地不足"
+};
+
+const causeLabels: Record<CauseKey, string> = {
+  "fewer-trees": "树变少",
+  "hot-ground": "土地变热",
+  "water-loss": "河水变少",
+  "animals-leave": "动物离开"
+};
+
 const actions: Array<{
   key: ActionKey;
   title: string;
@@ -152,6 +175,13 @@ const actions: Array<{
   }
 ];
 
+const actionLabels: Record<ActionKey, string> = {
+  plant: "种下树苗",
+  water: "保护水源",
+  cleanup: "清理垃圾",
+  habitat: "搭建鸟巢"
+};
+
 const hotspotPositions: Record<HotspotKey, { left: number; top: number }> = {
   river: { left: 52.5, top: 60.5 },
   forest: { left: 39, top: 72.5 },
@@ -198,6 +228,13 @@ export default function EcoDemoPage() {
   const [lens, setLens] = useState({ left: 22, top: 27 });
   const [coachNote, setCoachNote] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [classTaskId, setClassTaskId] = useState("");
+  const [coursewareTask, setCoursewareTask] = useState<EcoCoursewareTask | null>(null);
+  const [coursewareRole, setCoursewareRole] = useState<CoursewareRole | null>(null);
+  const [coursewareReady, setCoursewareReady] = useState(true);
+  const [coursewareMessage, setCoursewareMessage] = useState("");
+  const [completionSubmitted, setCompletionSubmitted] = useState(false);
+  const [completionSubmitting, setCompletionSubmitting] = useState(false);
 
   const restorationScore = Math.min(
     100,
@@ -206,10 +243,48 @@ export default function EcoDemoPage() {
   const activeHypothesis = hypotheses.find((item) => item.key === hypothesis) ?? hypotheses[0];
   const latestClue = observed.length ? hotspots.find((item) => item.key === observed[observed.length - 1]) : null;
   const stage = getStage(observed.length, causeChain.length, appliedActions.length);
+  const isStudentCourseware = Boolean(classTaskId && coursewareRole === "STUDENT");
+  const canSubmitCompletion = stage === "summary" && !completionSubmitting;
+  const submitButtonText = completionSubmitting ? "正在提交..." : completionSubmitted ? "重新提交给老师" : "提交给老师";
   const aiQuestion = useMemo(
     () => buildAiQuestion(observed.length, causeChain, hypothesis, appliedActions, studentReason, coachNote),
     [observed.length, causeChain, hypothesis, appliedActions, studentReason, coachNote]
   );
+
+  useEffect(() => {
+    const taskId = new URLSearchParams(window.location.search).get("taskId") ?? "";
+    setClassTaskId(taskId);
+    if (!taskId) return;
+
+    async function verifyCoursewareAccess() {
+      setCoursewareReady(false);
+      setCoursewareMessage("正在确认课堂课件状态...");
+      const token = localStorage.getItem("education_agent_token") ?? "";
+      const response = await fetch(`/api/courseware/eco-island/${taskId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: "no-store"
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setCoursewareReady(false);
+        setCoursewareMessage(
+          response.status === 403
+            ? "这节互动课件还没有开始，或当前账号不在这个班级里。"
+            : "没有找到这节互动课件，请回到学生端重新进入。"
+        );
+        return;
+      }
+
+      setCoursewareTask(data.task ?? null);
+      setCoursewareRole(data.role ?? null);
+      setCompletionSubmitted(Boolean(data.submission));
+      setCoursewareReady(true);
+      setCoursewareMessage(data.submission ? "你已经完成过这节互动课件，本次可以继续练习。" : "");
+    }
+
+    void verifyCoursewareAccess();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -677,6 +752,48 @@ export default function EcoDemoPage() {
     }
   }
 
+  async function submitCoursewareCompletion() {
+    if (!classTaskId || coursewareRole !== "STUDENT") {
+      setCoachNote("请从学生端进入课堂课件后再提交。");
+      playSound("error");
+      return;
+    }
+    if (stage !== "summary") {
+      setCoachNote("先完成观察、因果链和修复工具，再提交给老师。");
+      playSound("error");
+      return;
+    }
+
+    setCompletionSubmitting(true);
+    const token = localStorage.getItem("education_agent_token") ?? "";
+    const response = await fetch(`/api/courseware/eco-island/${classTaskId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        observed: observed.map((key) => hotspotMapLabels[key]),
+        causeChain: causeChain.map((key) => causeLabels[key]),
+        appliedActions: appliedActions.map((key) => actionLabels[key]),
+        hypothesis: hypothesisLabels[hypothesis],
+        studentReason,
+        restorationScore
+      })
+    });
+
+    setCompletionSubmitting(false);
+    if (response.ok) {
+      setCompletionSubmitted(true);
+      setCoachNote("已提交给老师。老师可以在后台选择你的作品投屏点评。");
+      playSound("confirm");
+      return;
+    }
+
+    setCoachNote("提交暂时没有成功，请稍后再试一次。");
+    playSound("error");
+  }
+
   function resetDemo() {
     setObserved([]);
     setHypothesis("fewer-trees");
@@ -690,13 +807,30 @@ export default function EcoDemoPage() {
     setStudentReason(initialReason);
   }
 
+  if (classTaskId && !coursewareReady) {
+    return (
+      <main className={styles.page}>
+        <section className={styles.coursewareGate}>
+          <img src="/eco-demo/mascot.svg" alt="" />
+          <span>互动课件</span>
+          <h1>AI 生态探险课：拯救小岛生态</h1>
+          <p>{coursewareMessage || "正在确认这节课是否已经开始..."}</p>
+          <div>
+            <Link href="/student">返回学生端</Link>
+            <Link href="/teacher">返回教师后台</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerCopy}>
-          <span>路演 Demo</span>
-          <h1>AI 生态探险课：拯救小岛生态</h1>
-          <p>拖动放大镜找证据，排列生态因果链，再把修复工具投放到小岛上，完成一节可投屏展示的互动科学课。</p>
+          <span>{coursewareTask ? `${coursewareTask.className}｜互动课件` : "路演 Demo"}</span>
+          <h1>{coursewareTask?.title ?? "AI 生态探险课：拯救小岛生态"}</h1>
+          <p>{coursewareTask?.instructions ?? "拖动放大镜找证据，排列生态因果链，再把修复工具投放到小岛上，完成一节可投屏展示的互动科学课。"}</p>
         </div>
         <div className={styles.headerMascot} aria-hidden="true">
           <img src="/eco-demo/mascot.svg" alt="" />
@@ -706,8 +840,8 @@ export default function EcoDemoPage() {
           </div>
         </div>
         <nav>
-          <Link href="/preview">
-            <ArrowLeft size={18} /> 返回预览
+          <Link href={coursewareRole === "TEACHER" ? "/teacher" : classTaskId ? "/student" : "/preview"}>
+            <ArrowLeft size={18} /> {coursewareRole === "TEACHER" ? "返回后台" : classTaskId ? "返回学生端" : "返回预览"}
           </Link>
           <button className={styles.soundButton} type="button" aria-pressed={soundEnabled} onClick={toggleSound}>
             {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -723,6 +857,28 @@ export default function EcoDemoPage() {
         <FlowStep active={stage === "repair"} done={appliedActions.length === actions.length} index="03" title="动手修复" />
         <FlowStep active={stage === "summary"} done={stage === "summary"} index="04" title="投屏成果" />
       </section>
+
+      {isStudentCourseware && (
+        <section className={stage === "summary" ? styles.submitDockReady : styles.submitDock}>
+          <div>
+            <strong>{completionSubmitted ? "已提交给老师" : "课堂完成后提交给老师"}</strong>
+            <span>
+              {completionSubmitted
+                ? "老师后台的提交列表里可以选择你的作品投屏点评。"
+                : stage === "summary"
+                  ? "你已经完成观察、因果链和修复行动，可以提交。"
+                  : `还需要完成：${stage === "observe" ? "观察线索" : stage === "reason" ? "原因连线" : "修复工具投放"}`}
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={!canSubmitCompletion}
+            onClick={submitCoursewareCompletion}
+          >
+            {submitButtonText}
+          </button>
+        </section>
+      )}
 
       <section className={styles.board}>
         <aside className={styles.leftRail}>
@@ -1035,6 +1191,26 @@ export default function EcoDemoPage() {
             我的解释
             <textarea value={studentReason} onChange={(event) => setStudentReason(event.target.value)} />
           </label>
+
+          {isStudentCourseware && (
+            <div className={styles.classSubmitCard}>
+              <span className={styles.stepIndex}>提交</span>
+              <h2>交给老师点评</h2>
+              <p>
+                {stage === "summary"
+                  ? "确认你的观察、因果链和修复方案后，提交给老师。"
+                  : "完成 4 个修复行动后，就可以提交给老师。"}
+              </p>
+              <button
+                type="button"
+                disabled={!canSubmitCompletion}
+                onClick={submitCoursewareCompletion}
+              >
+                {submitButtonText}
+              </button>
+              {completionSubmitted && <strong>已提交，老师可以投屏点评。</strong>}
+            </div>
+          )}
         </aside>
       </section>
 
@@ -1043,6 +1219,24 @@ export default function EcoDemoPage() {
           <span><MonitorUp size={18} /> 大屏投屏预览</span>
           <h2>我的生态修复方案</h2>
           <p>路演时可以投屏展示学生收集的证据、因果链、修复行动和 AI 追问。</p>
+          {isStudentCourseware && (
+            <div className={styles.submitPanel}>
+              <button
+                type="button"
+                disabled={!canSubmitCompletion}
+                onClick={submitCoursewareCompletion}
+              >
+                {submitButtonText}
+              </button>
+              <span>
+                {completionSubmitted
+                  ? "老师后台已能看到你的提交，可选择投屏点评。"
+                  : stage === "summary"
+                    ? "确认无误后提交，老师才能投屏点评。"
+                    : "完成 4 个修复行动后即可提交。"}
+              </span>
+            </div>
+          )}
         </div>
         <div className={styles.screenStats}>
           <div><strong>{observed.length}/{hotspots.length}</strong><span>证据卡</span></div>
